@@ -35,10 +35,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/databases/notes.db
-    - assets/sounds/sound.mp3
-    - assets/icon/app_icon.png
-
+    - assets/icon/
+    - assets/images/
 flutter_launcher_icons:
   android: true
   ios: true
