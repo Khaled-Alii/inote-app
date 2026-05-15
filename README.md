@@ -16,7 +16,7 @@
 
 | Home Screen | Create Note | Location Feature |
 | :---: | :---: | :---: |
-| <img src="assets/images/home_page.jpg" width="250"/> | <img src="assets/images/create_note_page.jpg" width="250"/> | <img src="assets/images/edit_note_page.jpg" width="250"/> |
+| <img src="https://github.com/user-attachments/assets/f3266a5b-b227-4111-8527-9504892f082b" width="250"/> | <img src="https://github.com/user-attachments/assets/1f30e7ff-2c0a-4ef0-adb6-5038026c4e6a" width="250"/> | <img src="https://github.com/user-attachments/assets/74297dc3-6e8a-44e6-a0df-4f570a61b4c2" width="250"/> |
 ---
 
 ## ✨ Key Features
