@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   bool _isSearching = false;
   ShakeDetector? detector;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  RxBool isSearching = false.obs;
 
   @override
   void initState() {
@@ -100,22 +101,23 @@ class _HomePageState extends State<HomePage> {
               )
             : const Text('INote', style: TextStyle(color: Colors.white)),
         actions: [
-          if (_isSearching)
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              tooltip: 'Clear search',
-              onPressed: () {
-                searchController.clear();
-                searchQuery.value = '';
-                setState(() => _isSearching = false);
-              },
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.search, color: Colors.white),
-              tooltip: 'Search',
-              onPressed: () => setState(() => _isSearching = true),
-            ),
+          Obx(
+            () => isSearching.value
+                ? IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    tooltip: 'Clear search',
+                    onPressed: () {
+                      searchController.clear();
+                      searchQuery.value = '';
+                      isSearching.value = false;
+                    },
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.search, color: Colors.white),
+                    tooltip: 'Search',
+                    onPressed: () => isSearching.value = true,
+                  ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -141,8 +143,6 @@ class _HomePageState extends State<HomePage> {
             return;
           }
 
-          // Bug #10 fix: AddNewNotePage still returns Map<Note,bool> —
-          // extract note and location flag from it safely.
           Note note = result.keys.first as Note;
           final bool shouldGetLocation = result.values.first as bool;
 
@@ -162,8 +162,6 @@ class _HomePageState extends State<HomePage> {
             }
           }
 
-          // Bug #3 fix: save to DB first to get the real auto-generated noteId,
-          // then add to the observable list with the correct id.
           final newId = await database.noteDao.saveNote(note);
           if (newId != null) {
             note = note.copyWith(noteId: newId);
@@ -190,32 +188,36 @@ class _HomePageState extends State<HomePage> {
                   return _EmptyState(
                     icon: Icons.note_alt_outlined,
                     title: 'No Notes Yet',
-                    subtitle: 'Tap the + button below\nto create your first note.',
+                    subtitle:
+                        'Tap the + button below\nto create your first note.',
                   );
                 }
                 // Sort chronologically (newest first).
-                final sorted = List<Note>.from(notes).sortedBy((note) {
-                  try {
-                    final p = note.time.split('/');
-                    return DateTime(
-                      int.parse(p[2]),
-                      int.parse(p[1]),
-                      int.parse(p[0]),
-                    );
-                  } catch (_) {
-                    return DateTime(2000);
-                  }
-                }).reversed.toList();
+                final sorted = List<Note>.from(notes)
+                    .sortedBy((note) {
+                      try {
+                        final p = note.time.split('/');
+                        return DateTime(
+                          int.parse(p[2]),
+                          int.parse(p[1]),
+                          int.parse(p[0]),
+                        );
+                      } catch (_) {
+                        return DateTime(2000);
+                      }
+                    })
+                    .reversed
+                    .toList();
 
-                // Apply search filter — also reactive to searchQuery changes.
                 final query = searchQuery.value.trim().toLowerCase();
                 final displayNotes = query.isEmpty
                     ? sorted
                     : sorted.where((note) {
                         final titleMatch =
                             note.title?.toLowerCase().contains(query) ?? false;
-                        final descMatch =
-                            note.description.toLowerCase().contains(query);
+                        final descMatch = note.description
+                            .toLowerCase()
+                            .contains(query);
                         return titleMatch || descMatch;
                       }).toList();
 
@@ -223,7 +225,8 @@ class _HomePageState extends State<HomePage> {
                   return _EmptyState(
                     icon: Icons.search_off_rounded,
                     title: 'No Results Found',
-                    subtitle: 'Nothing matched "${searchQuery.value.trim()}"\nTry different keywords.',
+                    subtitle:
+                        'Nothing matched "${searchQuery.value.trim()}"\nTry different keywords.',
                   );
                 }
 
@@ -234,8 +237,7 @@ class _HomePageState extends State<HomePage> {
                     parent: RangeMaintainingScrollPhysics(),
                   ),
                   itemBuilder: (context, index) {
-                    final currentNote =
-                        displayNotes[index]; // استخدام الـ Object بدلا من الإندكس المعرض للخطأ
+                    final currentNote = displayNotes[index];
 
                     return Card(
                       color: Colors.white,
@@ -281,8 +283,7 @@ class _HomePageState extends State<HomePage> {
                               ? const Icon(Icons.location_on)
                               : const Icon(
                                   Icons.sticky_note_2_outlined,
-                                  color: Colors
-                                      .teal, // لو الملاحظة عادية تظهر باللون ده
+                                  color: Colors.teal,
                                 ),
                           onLongPress: () async {
                             await deleteNote(currentNote, notes);
@@ -313,7 +314,7 @@ class _HomePageState extends State<HomePage> {
                                 );
                                 return;
                               }
-                              // Bug #4 fix: deleted from EditNotePage
+
                               if (result['delete_note'] == true) {
                                 await deleteNote(currentNote, notes);
                                 return;
@@ -391,7 +392,6 @@ class _HomePageState extends State<HomePage> {
               }),
             ),
 
-            // Bug #11 fix: use notes.length directly — no redundant notesCount needed
             Obx(() {
               final query = searchQuery.value.trim();
               return Padding(
