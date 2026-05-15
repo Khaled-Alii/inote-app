@@ -1,0 +1,45 @@
+name: inote
+description: "A note app pro"
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  get: ^4.7.3
+  geolocator: ^14.0.2
+  floor: ^1.5.0
+  sqflite: any
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  shake: ^3.0.0
+  just_audio: ^0.10.5
+  url_launcher: ^6.3.2
+  dartx: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  build_runner: any
+  floor_generator: any
+  flutter_launcher_icons: "^0.13.1"
+
+flutter:
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/databases/notes.db
+    - assets/sounds/sound.mp3
+    - assets/icon/app_icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
