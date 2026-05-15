@@ -18,6 +18,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final notes = <Note>[].obs;
+  final searchQuery = ''.obs;
+  final TextEditingController searchController = TextEditingController();
+  bool _isSearching = false;
   ShakeDetector? detector;
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -63,11 +66,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // إغلاق الموارد لمنع Memory Leak
   @override
   void dispose() {
     detector?.stopListening();
     _audioPlayer.dispose();
+    searchController.dispose();
     super.dispose();
   }
 
@@ -80,9 +83,40 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.teal[50],
       appBar: AppBar(
-        title: const Text('INote', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.teal[800],
         iconTheme: const IconThemeData(color: Colors.white),
+        title: _isSearching
+            ? TextField(
+                controller: searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                cursorColor: Colors.white,
+                decoration: InputDecoration(
+                  hintText: 'Search notes...',
+                  hintStyle: TextStyle(color: Colors.white54),
+                  border: InputBorder.none,
+                ),
+                onChanged: (value) => searchQuery.value = value,
+              )
+            : const Text('INote', style: TextStyle(color: Colors.white)),
+        actions: [
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              tooltip: 'Clear search',
+              onPressed: () {
+                searchController.clear();
+                searchQuery.value = '';
+                setState(() => _isSearching = false);
+              },
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              tooltip: 'Search',
+              onPressed: () => setState(() => _isSearching = true),
+            ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
@@ -153,12 +187,14 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: Obx(() {
                 if (notes.isEmpty) {
-                  return Center(
-                    child: Text('No Notes Yet', textAlign: TextAlign.center),
+                  return _EmptyState(
+                    icon: Icons.note_alt_outlined,
+                    title: 'No Notes Yet',
+                    subtitle: 'Tap the + button below\nto create your first note.',
                   );
                 }
-                // Bug #5 fix: parse date string for chronological sort, not lexicographic.
-                final displayNotes = List<Note>.from(notes).sortedBy((note) {
+                // Sort chronologically (newest first).
+                final sorted = List<Note>.from(notes).sortedBy((note) {
                   try {
                     final p = note.time.split('/');
                     return DateTime(
@@ -170,6 +206,26 @@ class _HomePageState extends State<HomePage> {
                     return DateTime(2000);
                   }
                 }).reversed.toList();
+
+                // Apply search filter — also reactive to searchQuery changes.
+                final query = searchQuery.value.trim().toLowerCase();
+                final displayNotes = query.isEmpty
+                    ? sorted
+                    : sorted.where((note) {
+                        final titleMatch =
+                            note.title?.toLowerCase().contains(query) ?? false;
+                        final descMatch =
+                            note.description.toLowerCase().contains(query);
+                        return titleMatch || descMatch;
+                      }).toList();
+
+                if (displayNotes.isEmpty) {
+                  return _EmptyState(
+                    icon: Icons.search_off_rounded,
+                    title: 'No Results Found',
+                    subtitle: 'Nothing matched "${searchQuery.value.trim()}"\nTry different keywords.',
+                  );
+                }
 
                 return ListView.builder(
                   itemCount: displayNotes.length,
@@ -336,9 +392,92 @@ class _HomePageState extends State<HomePage> {
             ),
 
             // Bug #11 fix: use notes.length directly — no redundant notesCount needed
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Obx(() => Text('Total notes is ${notes.length}')),
+            Obx(() {
+              final query = searchQuery.value.trim();
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(
+                  query.isEmpty
+                      ? 'Total notes: ${notes.length}'
+                      : 'Showing results for "$query"',
+                  style: TextStyle(color: Colors.teal[700], fontSize: 13),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon inside a layered circle
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer faint circle
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.teal.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                // Inner circle
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    color: Colors.teal.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                // Icon
+                Icon(icon, size: 48, color: Colors.teal[700]),
+              ],
+            ),
+            const SizedBox(height: 28),
+            // Title
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.teal[900],
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Subtitle
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: Colors.grey[500],
+              ),
             ),
           ],
         ),
